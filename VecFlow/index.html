@@ -32,8 +32,9 @@
 <meta property="og:image" content="http://example.com/VecFlow/index.png">
 <meta property="og:image" content="http://example.com/VecFlow/interleaved.png">
 <meta property="og:image" content="http://example.com/VecFlow/batching.png">
+<meta property="og:image" content="http://example.com/VecFlow/filtering.png">
 <meta property="article:published_time" content="2025-06-05T07:26:02.000Z">
-<meta property="article:modified_time" content="2025-06-11T07:23:40.440Z">
+<meta property="article:modified_time" content="2025-06-17T02:29:44.443Z">
 <meta property="article:author" content="John Doe">
 <meta property="article:tag" content="ANN">
 <meta property="article:tag" content="Hybrid Filter">
@@ -323,7 +324,7 @@
 <img src="/VecFlow/batching.png" srcset="/img/loading.gif" lazyload class="">
 <h2 id="multi-label-query-processing-with-predicate-filtering-and-early-stopping"><a class="markdownIt-Anchor" href="#multi-label-query-processing-with-predicate-filtering-and-early-stopping"></a> Multi-Label Query Processing with Predicate Filtering and Early Stopping</h2>
 <p>  In practice, one query is often associated with multiple label and VecFlow handles it through GPU parallelism, where each thread block processes one query label.</p>
-
+<img src="/VecFlow/filtering.png" srcset="/img/loading.gif" lazyload class="">
 <h3 id="handling-or-operations"><a class="markdownIt-Anchor" href="#handling-or-operations"></a> Handling OR Operations</h3>
 <p>  For multi-label query connected by OR operations, we can simply convert it into single-label search problem, treating each label as a separate search request and launch multiple standard single-label searches in parallel, using IVF-Graph search for high-specificity labels and IVF-BFS for low-specificity labels, followed by merging results to find the nearest neighbors that statisfy any of the query labels.</p>
 <h3 id="handling-and-operations"><a class="markdownIt-Anchor" href="#handling-and-operations"></a> Handling AND Operations</h3>
@@ -438,6 +439,12 @@
                 <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
+                    
+                      <a href="/UNG/" title="UNG, Navigating Lables and Vectors, A Unified Approach to Filtered Approximate Nearest Neighbor Search">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">UNG, Navigating Lables and Vectors, A Unified Approach to Filtered Approximate Nearest Neighbor Search</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
                     
                   </article>
                   <article class="post-next col-6">
