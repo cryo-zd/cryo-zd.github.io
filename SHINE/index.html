@@ -1,0 +1,724 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="cryo">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Summary    In this work, we propose a scalable HNSW index for ANN search in disaggregated memory. In contrast to existing distributed approaches, which partition the graph at the cost of accuracy, ou">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SHINE, A Scalable HNSW Index in Disaggregated Memory">
+<meta property="og:url" content="http://example.com/SHINE/index.html">
+<meta property="og:site_name" content="cryo&#39;s blob">
+<meta property="og:description" content="Summary    In this work, we propose a scalable HNSW index for ANN search in disaggregated memory. In contrast to existing distributed approaches, which partition the graph at the cost of accuracy, ou">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/SHINE/index.png">
+<meta property="og:image" content="http://example.com/SHINE/search.png">
+<meta property="og:image" content="http://example.com/SHINE/route.png">
+<meta property="og:image" content="http://example.com/SHINE/replace.png">
+<meta property="og:image" content="http://example.com/SHINE/rexample.png">
+<meta property="og:image" content="http://example.com/SHINE/adapt.png">
+<meta property="article:published_time" content="2025-08-06T07:40:01.000Z">
+<meta property="article:modified_time" content="2025-08-08T08:31:30.293Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="ANN">
+<meta property="article:tag" content="Graph Based">
+<meta property="article:tag" content="Disaggregated Architecture">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/SHINE/index.png">
+  
+  
+  
+  <title>SHINE, A Scalable HNSW Index in Disaggregated Memory - cryo&#39;s blob</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/KaTeX/0.16.2/katex.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cryo</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="SHINE, A Scalable HNSW Index in Disaggregated Memory"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          619 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          6 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">SHINE, A Scalable HNSW Index in Disaggregated Memory</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="summary"><a class="markdownIt-Anchor" href="#summary"></a> Summary</h1>
+<p>   In this work, we propose a scalable HNSW index for ANN search in disaggregated memory. In contrast to existing distributed approaches, which partition the graph at the cost of accuracy, our method builds a graph-preserving index that reaches the same accuracy as a single-machine HNSW. Continuously fetching high-dimensional vector data from remote memory leads to severe net-work bandwidth limitations, which we overcome by employing an efficient caching mechanism. Since answering a single query involves processing numerous unique graph nodes, caching alone is not sufficient to achieve high scalability. We logically combine the caches of the compute nodes to increase the overall cache effectiveness and confirm the efficiency and scalability of our method in our evaluation.</p>
+<h1 id="details"><a class="markdownIt-Anchor" href="#details"></a> Details</h1>
+<h2 id="baseline-limitations"><a class="markdownIt-Anchor" href="#baseline-limitations"></a> Baseline &amp; Limitations</h2>
+<p>   This section introduces our baseline HNSW index design for the disaggregated memory architecture. Importantly, we build a global HNSw index that preserves the original HNSW structure while being distributed to arbitrarily many MNs(Memory nodes). This allows to achieve exactly the same accuracy, whereas other distributed approaches loas accuracy as they split the HNSW index.</p>
+<h3 id="index-layout"><a class="markdownIt-Anchor" href="#index-layout"></a> Index Layout</h3>
+<img src="/SHINE/index.png" srcset="/img/loading.gif" lazyload class="">
+<p>   A graph node in HNSW stores the d-dimensional vector components and its outgoing neighbor nodes for each level on which the node occurs. We represent them compactly in memory as shown in Figure 2. To uniquely identify a node, we use a header that stores the node id, the maximum level at which this node for insertions. Similar to the original HNSW implementation, the lock is only used to construct the index concurrently. For each level, we store a neighbor list prefixed by a 64-bit remote pointer: The 48 least significant bits encode the virtual address of a memory region within the MN, and the remaining bits encode the identifier of the MN. Hence, the remote pointer is a globally unique address among all MNs.<br />
+   When inserting a node, we randomly choose a MN on which we atomically increase a bump pointer using a remote FAA via RDMA.  In summary, a node is stored  on randomly chosen MN, and its outgoing neighbors are represented by remote pointers(that point to other nodes) compactly stored in a fixed-size memory region.</p>
+<h3 id="query-processing"><a class="markdownIt-Anchor" href="#query-processing"></a> Query Processing</h3>
+<p>   To process a query in HNSW, the nodes at the top-most level are greedily traversed(starting from a fixed entry point) until the nearest neighbor to a query <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span></span></span></span> is reached. Typically, the entry point is the first node that has been inserted at the top-most level. The nearest neighbor found at level <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span></span></span></span> serves as entry point for the next level <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">l - 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span> . Algorithm 1 with <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">l = 0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span></span></span></span> shows the base level search, where the greedy search is expanded by searching the <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mi>f</mi><mo>−</mo></mrow><annotation encoding="application/x-tex">ef-</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mord">−</span></span></span></span> nearest neighbors using two heap data structures based on the distance to the query.<br />
+   The only difference between SHINE and standard HNSW search is that  nodes and neighbor lists are read from remote memory(line 6 and 12). The address of a neighbor list can be deduced from the node’s remote pointer(line 5).</p>
+<img src="/SHINE/search.png" srcset="/img/loading.gif" lazyload class="">
+<h3 id="scalability-constraints"><a class="markdownIt-Anchor" href="#scalability-constraints"></a> Scalability Constraints</h3>
+<p>   In disaggregated memory, all computations are executed on CNs. Thus, answering a single K-NN query involves fetching many high-dimensional vectors from the MNs to the CN that processes the query. Note that the entire vectors are required for distance computations(line 15 in Algo 1). As a result, the throughout is network-bound despite the use of an ultra-fast low-latency network. The natural solution to this problem is to cache frequently accessed graph nodes on the CNs  to reduce memory reads(line 10-13 in Algo 1). The latency gap between local and remote is 10-100x lower than the gap between main memory and SSD. Hence, an extremely fast cache with a low-overhead replacement strategy is crucial to reach high throughputs.<br />
+   In contrast to many other index structures, an HNSW index in disaggregated memory poses a unique challenge to a caching mechanism: A single query requires access to many different graph nodes, in particular at the base level. This results in many cache misses if (a) the cache is not sufficiently large or (b) the workload follows a uniform distribution.<br />
+   To address this problem and overcome the network bound, we propose to logically combine the caches of all CNs and route queries to the best matching CN.</p>
+<h3 id="index-updates"><a class="markdownIt-Anchor" href="#index-updates"></a> Index Updates</h3>
+<p>   A limitation of HNSW lies in its static nature since the index has not been inherently designed for dynamic datasets. The index structure allows updates, but particularly deletes and subsequent inserts are very efficient and can lead to unreachable graph nodes. To alleviate this issue, it is common to rebuild the index after a certain amount of deletions. Supporting efficient index updates is considered an orthogonal research direction, and we focus only on K-NN queries in this work. Note that supporting insertions(without deletions) can be straightforwardly integrated into our method by using the insert procedure for constructing the graph, and locking neighbor lists during the search to guarantee consistent query processing. Notably, our cache design is suitable for index updates and requires no coherency protocol(only neighbor lists are modified, which are not cached).</p>
+<h2 id="optimizations-outline"><a class="markdownIt-Anchor" href="#optimizations-outline"></a> Optimizations Outline</h2>
+<p>   We identify three key challenges and briefly introduce three optimization techniques to address these challenges and optimize for scalability:</p>
+<ul>
+<li>Read Amplification: HNSW requires to repeatedly fetch many high-dimensional vectors for distance computations, resulting in severe read amplifications. SHINE address this by caching frequently accessed nodes in the small memory CNs to save remote reads</li>
+<li>Cache Segmentation: The cache capability of a CN is limited and shared among all workers on this CN. In addition, the number of cache entries is restricted as high-dimensional vectors must be stored, and the caches of different CNs will largely overlap, thereby wasting valuable cache capacity and effective reducing the overall cache size. SHINE logically combines the CN caches by assigning each CN to a specific portion of the index. In particular, the HNSW graph is logically divided into <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">∣</mi><mi>C</mi><mi>N</mi><mi mathvariant="normal">∣</mi></mrow><annotation encoding="application/x-tex">|CN|</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mord">∣</span></span></span></span> many partitions, where each partition represents a CN’s cache. Once a query arrives at a CN, an oracle determines the CN that can process the query most efficiently by finding the query’s best fitting partition.</li>
+<li>Query Routing: A query is processed by a random CN whose cache may not represent the target partition of this query. Hence, a query must be forwarded to the CN with the best matching cache. SHINE implements adaptive query routing, where a query is forworded to the CN returned by the oracle via a random MN using two-side RDMA. The destined CN receives the message and processes the query. This strategy reduces the overlap of nodes among caches, which ultimately increases the hit rate and the throughput.</li>
+</ul>
+<img src="/SHINE/route.png" srcset="/img/loading.gif" lazyload class="">
+<h2 id="node-caching"><a class="markdownIt-Anchor" href="#node-caching"></a> Node Caching</h2>
+<p>   Processing a query involves reading numerous graph nodes and their neighbor lists from remote memory, resulting in heavily high read amplifications. To save remote memory accesses, SHINE implements a lightweight software-level cache that keep hot nodes in the local memory of a CN.<br />
+   A major challenge is achieving efficient synchronization between cache accesses and replacements, which quickly becomes a  bottlrneck if the latency gap between local and remote memory is low. We overcome this issue with lock-free reads and a lighweight replacement strategy.<br />
+  <strong>What to cache:</strong> In addition to caching vector components that are required for distance computations, neighbor lists(per level) can be cached. However, since neighbor lists contribute only a small fraction of RDMA reads, we do not cache them.[ 此处应有数学推导证明为什么仅是小部分，见原文 ]<br />
+  <strong>Cache implementation:</strong> The cache is implemented as a concurrent hash table mapping a remote pointer to a linked list of cache entries to resolve hash collisions with chaining. The list can be locked for insertions and deletions, and a cache entry stores the keys, a cooling flag, and a pointer to a local memory location that stores the vector. Since cache accesses must be efficient due to the low latency gap between local and remote memory, cache lookups are lock-free, which is realized with pointer tagging: A cache entry stores (1)a tag and (2)a tagged pointer to the subsequent entry in the chain. The pointer tag must match the entry tag that the pointer references, otherwise the entry is corrupted( has been freed and potentially reused by another thread ) and the cache lookup must the restarted. Deleting a cache entry occurs under a lock on the list and increments the entry’s tags, thereby invalidating the pointer that references that entry. The released entry may then be reused. We prefer pointer tagging over lock versioning as it validates individual cache entries instead the entire chain.</p>
+<h3 id="cache-replacement"><a class="markdownIt-Anchor" href="#cache-replacement"></a> Cache Replacement</h3>
+<p>   Since the latency gap between local and remote memory accessed vis RDMA(~2us) is notably smaller than the gap between main memory and SSDs(~10-100us), a cache replacement strategy with very low overhead is crucial. Conventioal replacement strategies, such as LRU, MRU, or frequency-based methods, must constantly update head and tail pointers of a centralized data structure(shared among all compute threads) to track information for future eviction. Moreover, in disaggregated memory, where the core count of CNs is typically high, maintaining such data structures, i.e., performing extra work for every cache hit, can lead to severe scalability bottlenecks. For this reason, we choose a relaxed LRU variant following the design of [1] that randomly puts cache entries into a cooling state and avoids updating tracking information for each cache hit. A cache entry remains in the cooling state for a certain amount of time and is eventually evicted if meanwhile no hit occurs.[ 近似LRU ]<br />
+   The cooling mechanism is implemented via a hash table, where each bucket stores a fixed-size FIFO array, containing 8B keys(remote pointers) that represent entries in the cooling state, protected by a lock. Rather than using a single cooling array, the hash table reduces the pressure of a single lock and thus increases scalability. The size of the cooling table is relative to the cache size and keeps a fixed amount of cache entries(e.g., 10%) in the cooling state.</p>
+<img src="/SHINE/replace.png" srcset="/img/loading.gif" lazyload class="">
+<h3 id="cache-admission"><a class="markdownIt-Anchor" href="#cache-admission"></a> Cache Admission</h3>
+<p>   Since the amount of memory of CNs is small and caching nodes is inherently space consuming, it is important to keep only hot nodes in the cache. If the cache is full, admitting a new node triggers an eviction of another node. Many cache design for disaggregated memory optimistically adimit every item in the cache. But possibly, the evicted entry is hotter than the new item, which is unknown at time of admission. Moreover, frequent evictions come with non-negligible synchronization verhead in the hash tables and thus reduce the overall cache performance.<br />
+   To reduce the number of cache evictions, SHINE adimts base-level nodes only with a fixed probability as proposed by [1]. Our experiments have shown that admitting 1% of the base-level nodes works well in practice, i.e., nodes that are accessed frequently will eventually make it to the cache. Upper-level nodes that are crucial for navigation are always admitted.</p>
+<h2 id="deadling-with-cache-segmentation"><a class="markdownIt-Anchor" href="#deadling-with-cache-segmentation"></a> Deadling with Cache Segmentation</h2>
+<p>   As discussed in the previous section, caching for HNSW indexes is challenging due to the large number of nodes that must be cached. Moreover, the high dimensionality of the indexed vectors further constraints the number of cache entries that can be stored. Therefore, it is crucial that the available cache memory is used effectively.<br />
+   The distribued nature of our setting makes it difficult to effectively utilize the globally available cache memory, i.e., the sum of all cache memories across all CNs. The cache memory of an individual CN is shared by all workers on that node, and the caches of other CNs cannot be accessed. As all CNs process queries from the same global distribution, the overlap of cache nodes between differecnt CNs is large, wasting valuable cache capacity. Although the global cache size increases with more CNs, the effective cache size will not scale due to repetitive entries between caches on different CNs.</p>
+<h3 id="cache-segmentation-penalty"><a class="markdownIt-Anchor" href="#cache-segmentation-penalty"></a> Cache Segmentation Penalty</h3>
+<p>   We introduce a new concept, the cache segmentation penalty, which quantifies the performance impact of dividing global cache meory among multiple nodes. While cache hit – defined as the number of cache hits divided by the total number of accessed nodes – is commobly used to access cache performance, it fails to isolate the effect of segmentation: the hit rate is heavily influenced by the relative size of the cache and the index, making it difficult to attribute performance of changes specifically to segmentation.<br />
+   Intuitively, the cache segmentation penalty measures the ratio between the achieved cache hit rate(CHR) in distributed system and the optimal hit rate(<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mi>H</mi><msub><mi>R</mi><mrow><mi>m</mi><mi>a</mi><mi>x</mi></mrow></msub></mrow><annotation encoding="application/x-tex">CHR_{max}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.00773em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">m</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight">x</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>) achievable in the same setting. The optimal rate corresponds to a scenario where no duplicate entries are stored across caches, modeled as the a single cache shared by all CNs, with the same aggreated cache size over all CNs.<br />
+  (Definition) Cache Segmentation Penalty: Given <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mi mathvariant="normal">∣</mi><mi>C</mi><mi>N</mi><mi mathvariant="normal">∣</mi></mrow><annotation encoding="application/x-tex">k = |CN|</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mord">∣</span></span></span></span> compute nodes with cache sizes <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>c</mi><mn>2</mn></msub><mo separator="true">,</mo><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mo separator="true">,</mo><msub><mi>c</mi><mi>k</mi></msub></mrow><annotation encoding="application/x-tex">c_{1},c_{2},...,c_{k}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>. Let CHR be the measured cache hit rate for a given query load in the distributed cache setting, and <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mi>H</mi><msub><mi>R</mi><mrow><mi>m</mi><mi>a</mi><mi>x</mi></mrow></msub></mrow><annotation encoding="application/x-tex">CHR_{max}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.00773em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">m</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight">x</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> the cache hit rate achieved for the same setting except that all compute nodes share a single cache size of <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>=</mo><mstyle scriptlevel="0" displaystyle="false"><msubsup><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>k</mi></msubsup><msub><mi>c</mi><mi>i</mi></msub></mstyle></mrow><annotation encoding="application/x-tex">C= {\textstyle \sum_{i=1}^{k}c_{i}}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.2887179999999998em;vertical-align:-0.29971000000000003em;"></span><span class="mord"><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.9890079999999999em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.2029em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29971000000000003em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span>. The cache segmentation penalty(CSP) is defined as:</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable width="100%"><mtr><mtd width="50%"></mtd><mtd><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">P</mi></mrow><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">H</mi><mi mathvariant="normal">R</mi></mrow><msub><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">H</mi><mi mathvariant="normal">R</mi></mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">x</mi></mrow></msub></mfrac></mrow></mtd><mtd width="50%"></mtd><mtd><mtext>(1)</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">\mathrm{CSP} = 1 - \frac{\mathrm{CHR}}{\mathrm{CHR}_\mathrm{max}} \tag{1}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord"><span class="mord mathrm">C</span><span class="mord mathrm">S</span><span class="mord mathrm">P</span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:2.19633em;vertical-align:-0.8360000000000001em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.36033em;"><span style="top:-2.3139999999999996em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord mathrm">C</span><span class="mord mathrm">H</span><span class="mord mathrm">R</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathrm mtight">m</span><span class="mord mathrm mtight">a</span><span class="mord mathrm mtight">x</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">C</span><span class="mord mathrm">H</span><span class="mord mathrm">R</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8360000000000001em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span><span class="tag"><span class="strut" style="height:2.19633em;vertical-align:-0.8360000000000001em;"></span><span class="mord text"><span class="mord">(</span><span class="mord"><span class="mord">1</span></span><span class="mord">)</span></span></span></span></span></span></p>
+<h3 id="logical-index-partitioning"><a class="markdownIt-Anchor" href="#logical-index-partitioning"></a> Logical Index Partitioning</h3>
+<p>   We propose logical index partitioning to mitigate the negative effects of cache segmentation. The core idea is to divide the nodes of HNSW index into disjoint partitions, assigning each CN to a unique partition. As a result, each CN becomes responsible for a specific portition of the index primarily handles queries that are cloest to its assigned partition. This specialization reduces overlap between caches, improving the cache segmentation penalty.<br />
+   We propose a technique to efficiently clsuter the index into partitions of similar size and  discuss the oracle used to assign queries to the most appropriate partition(i.e., CN). Note that the partitioning is purely logical: no data is moved, and the structure of the index(i.e., its nodes and edges) remains unchanged.<br />
+  <strong>Clustering.</strong> We use balanced k-means to cluster the nodes of the index into <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mi mathvariant="normal">∣</mi><mi>C</mi><mi>N</mi><mi mathvariant="normal">∣</mi></mrow><annotation encoding="application/x-tex">k=|CN|</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mord">∣</span></span></span></span> many partitionss of near-equal size. Conventional k-means aims to build k disjoint clusters such that the sum of squared distances of the data points to the cluster centroids is minimized. Unfortunately, for high-dimensional vector spaces, often some very small culsters emerge, even if the data has a balanced distribution. Balanced k-means additionally minimizes the difference in cluster sizes and thus, ensures that each cluster consists of a similar number of points. Since finding optimal cluster is NP-hard, we use the approximation proposed by [2] and cluster only on a small(&lt;100k) subset of the nodes in the index. In particular, we choose the first level of the HNSW index(from top to bottom) that contains <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≥</mo><mn>1000</mn></mrow><annotation encoding="application/x-tex">\ge 1000</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7719400000000001em;vertical-align:-0.13597em;"></span><span class="mrel">≥</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">0</span><span class="mord">0</span><span class="mord">0</span></span></span></span> nodes as a representative sample.<br />
+   We found that for small and odd <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span></span> values(e.g., 3 or 5 CNs), the approximation may fail to generate well-balanced clusters. To address this, we apply a simple yet effective heuristic: We first double the number of clusters until the resulting clusters are nearly equal in size. Then, we greedily merge the pairwise cloest clusters(based on centroid distance) until only <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mi mathvariant="normal">∣</mi><mi>C</mi><mi>N</mi><mi mathvariant="normal">∣</mi></mrow><annotation encoding="application/x-tex">k=|CN|</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mord">∣</span></span></span></span> clusters remain.<br />
+   Clustering is highly efficient(takes less than 1s) due to the small number of nodes involved. In our implementation, each CN performs clustering using the same randome seed, ensuring identical cluster assignments. Only the cluster centroids are stored on each CN.<br />
+   <strong>Oracle.</strong> The oracle predicates the best fitting CNs for a given query q. It stores a mapping from the cluster centroids to the CNs and resturns a list of CNs ranked by the distance between q and the representaive centroids. The CN that best fits q is the first entry in the list, and the last entry is the CN with the most distant centroid. Depending on the routing policy, a query may not be assigned to the best fitting CN; therefore, the oracle maintains a ranked list.</p>
+<h2 id="query-routing"><a class="markdownIt-Anchor" href="#query-routing"></a> Query Routing</h2>
+<p>   In order to imprve the cache efficiency, SHINE aims to process queries on the best maching CNs are proposed by the oracle. The queries received by a CN(e.g., from clients) are appeneded to its input queue. The CN pops queries from the input queue and either routes them to another CN or appends them to the CN’s working queue to be processed locally. Since the disaggregated memory architetcure does not allow direct communication between CNs(due to scalability reasons), MN must be involved to route queries.</p>
+<h3 id="routing-mechanism"><a class="markdownIt-Anchor" href="#routing-mechanism"></a> Routing Mechanism</h3>
+<p>   In our disaggregated memory setting, we use two-side RDMA verbs to route queries through MNs. That’s, SHINE leverages the low compute power of MNs for routing: Each CN and MN spawns a router thread responsible for routing. A CN’s router wraps the query into a message and appends a header to encode the destination CN. Then the router SENDs the message to a random MN; the MS is choosen randomly to evenly distribute the routing load. Upon receiving the request, the MN reads the header and forwards the message(using SEND operation) to the target CN. Finally, the destination CN receives the message and inserts the query into its local working queue.</p>
+<img src="/SHINE/rexample.png" srcset="/img/loading.gif" lazyload class="">
+<h3 id="routing-polices"><a class="markdownIt-Anchor" href="#routing-polices"></a> Routing Polices</h3>
+<p>   The overall goal of a routing policy is to increase the query throughput for a wide range of workloads. SHINE use adaptive routing to solve this problem, which dynamicall adjusts the per-node query limit for each batch(relative to Balanced Routing that send at most <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mi>b</mi><mrow><mi mathvariant="normal">∣</mi><mi>C</mi><mi>N</mi><mi mathvariant="normal">∣</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">\frac{b}{|CN|}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.400108em;vertical-align:-0.52em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8801079999999999em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">∣</span><span class="mord mathnormal mtight" style="margin-right:0.07153em;">C</span><span class="mord mathnormal mtight" style="margin-right:0.10903em;">N</span><span class="mord mtight">∣</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">b</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.52em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span> queries to each CN in one batch and reset query counter for all CN at the end of each batch). Each CN periodically broadcast the length <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">p</span></span></span></span> of its local working queue to all other CNs. The relative queue lengths are then used to distribute the next batch of queries: CNs with longer queues receive fewer queries to balance the load.<br />
+  Algorithm 2 outlines the adaptive query routing procedure. For each query, the oracle returns a ranked list of CNs, ordered by the distance between the query and the cluster centroids. The router selects the first CN <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi></mrow><annotation encoding="application/x-tex">\delta</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.03785em;">δ</span></span></span></span> in this list that has not yet reached its query limit for the current batch(line 3). If <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi></mrow><annotation encoding="application/x-tex">\delta</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.03785em;">δ</span></span></span></span> corresponds to the local CN, the query is added to its local working queue(line 4); othrwise, the query is forwarded to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><msub><mi>N</mi><mi>δ</mi></msub></mrow><annotation encoding="application/x-tex">CN_{\delta}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03785em;">δ</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> via a random MN.<br />
+   After processing a batch of size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">b</span></span></span></span>, the CN’s router tracks the number of remaining queries <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">p</span></span></span></span> in its local working queue and broadcasts <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">p</span></span></span></span>(vis a random MN) to all other CNs to inform them about its current progress(line 7-8). Since the router thread on a CN only sends and receives queries, it progresses faster then the other threads that must answer queries. Therefore, after tracking the progress value <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">p</span></span></span></span>, the router thread sleeps until the length of the local working queue falls below <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.61508em;vertical-align:0em;"></span><span class="mord mathnormal">t</span></span></span></span>(line 9). Note that the choice of <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.61508em;vertical-align:0em;"></span><span class="mord mathnormal">t</span></span></span></span> is not critical as it only serves for synchronization.<br />
+   Finally, we update the limits for all CNs by computing a weight <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span></span></span></span> that captures the relative lengths of the working queues <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">p</span></span></span></span>. The weighted limits for each CN are computed as <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mrow><mi>w</mi><mo>⋅</mo><mi>b</mi></mrow><mrow><mi mathvariant="normal">∣</mi><mi>C</mi><mi>N</mi><mi mathvariant="normal">∣</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">\frac{w \cdot b}{|CN|}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.400108em;vertical-align:-0.52em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8801079999999999em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">∣</span><span class="mord mathnormal mtight" style="margin-right:0.07153em;">C</span><span class="mord mathnormal mtight" style="margin-right:0.10903em;">N</span><span class="mord mtight">∣</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span><span class="mbin mtight">⋅</span><span class="mord mathnormal mtight">b</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.52em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span>(line 12-15). Note that the weighted limits sum up to $$, and <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">w=1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span> indicates that all progress values <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">p</span></span></span></span> are equal.</p>
+<img src="/SHINE/adapt.png" srcset="/img/loading.gif" lazyload class="">
+<h1 id="references"><a class="markdownIt-Anchor" href="#references"></a> References</h1>
+<ol>
+<li>Baotong Lu, Kaisong Huang, Chieh-Jan Mike Liang, Tianzheng Wang, and Eric Lo. 2024. DEX: Scalable Range Indexing on Disaggregated Memory. Proc. VLDB Endow. 17, 10 (2024), 2603–2616. <a target="_blank" rel="noopener" href="https://doi.org/10.14778/3675034.3675050">https://doi.org/10.14778/3675034.3675050</a></li>
+<li>Rieke de Maeyer, Sami Sieranoja, and Pasi Fränti. 2023. Balanced kmeans revisited. Applied Computing and Intelligence 3, 2 (2023),145–179. <a target="_blank" rel="noopener" href="https://doi.org/10.3934/aci.2023008">https://doi.org/10.3934/aci.2023008</a></li>
+</ol>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/DatabaseGroup/shine-hnsw-index">source code on Github</a></li>
+<li>WIDMOSER M, KOCHER D, AUGSTEN N. SHINE: A Scalable HNSW Index in Disaggregated Memory[EB/OL]. arXiv, 2025[2025-08-08]. <a target="_blank" rel="noopener" href="http://arxiv.org/abs/2507.17647">http://arxiv.org/abs/2507.17647</a>.</li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/ANN/" class="category-chain-item">ANN</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/ANN/Advanced/" class="category-chain-item">Advanced</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/ANN/" class="print-no-link">#ANN</a>
+      
+        <a href="/tags/Graph-Based/" class="print-no-link">#Graph Based</a>
+      
+        <a href="/tags/Disaggregated-Architecture/" class="print-no-link">#Disaggregated Architecture</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>SHINE, A Scalable HNSW Index in Disaggregated Memory</div>
+      <div>http://example.com/SHINE/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>cryo</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2025年8月6日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/HQANN/" title="HQANN, Efficient and Robust Similarity Search for Hybrid Queries with Structured and Unstructured Constraints">
+                        <span class="hidden-mobile">HQANN, Efficient and Robust Similarity Search for Hybrid Queries with Structured and Unstructured Constraints</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+  
+  
+
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
